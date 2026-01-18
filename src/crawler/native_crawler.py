@@ -67,8 +67,6 @@ def main():
         xml = resp.read().decode('utf-8')
         
         post_sitemaps = re.findall(r'<loc>(https://autowein\.com/.*?post-sitemap.*?\.xml)</loc>', xml)
-        
-        # Remove duplicates
         post_sitemaps = sorted(list(set(post_sitemaps)))
         
         print(f"[Crawler] Found {len(post_sitemaps)} sitemaps.")
@@ -76,14 +74,11 @@ def main():
         for i, sm_url in enumerate(post_sitemaps):
             if len(article_ids) >= LIMIT_REAL: break
             try:
-                # print(f"  > Parsing sitemap {i+1}: {sm_url}...")
                 sm_resp = opener.open(sm_url)
                 sm_xml = sm_resp.read().decode('utf-8')
                 urls = re.findall(r'<loc>(https://autowein\.com/.*?)</loc>', sm_xml)
                 urls = [u for u in urls if u != sm_url and not u.endswith('.xml')]
                 for u in urls:
-                    # Extract ID from URL
-                    # Pattern: /12345/ or /title-12345/
                     m = re.search(r'/(\d+)/?$', u)
                     if m:
                         article_ids.add(m.group(1))
@@ -95,13 +90,28 @@ def main():
     except Exception as e:
         print(f"[Crawler] Sitemap Discovery Failed: {e}")
     
-    target_ids = list(article_ids)[:LIMIT_REAL]
+    # RESUME LOGIC
+    import os
+    collected_ids = set()
+    if os.path.exists(OUTPUT_FILE):
+        print(f"[Crawler] Scanning existing file {OUTPUT_FILE} to resume...")
+        with open(OUTPUT_FILE, 'r', encoding='utf-8') as f:
+            for line in f:
+                try:
+                    obj = json.loads(line)
+                    if 'id' in obj: collected_ids.add(str(obj['id']))
+                except: pass
+        print(f"[Crawler] Found {len(collected_ids)} already collected items.")
+        
+    all_target_ids = list(article_ids)
+    target_ids = [pid for pid in all_target_ids if pid not in collected_ids]
+    target_ids = target_ids[:(LIMIT_REAL - len(collected_ids))]
     
-    # 4. Fetch Details via API
-    print(f"[Crawler] API Fetching for {len(target_ids)} items...")
+    print(f"[Crawler] Resuming fetch for {len(target_ids)} NEW items...") # Will correspond to remaining history
     
     count_ok = 0
-    with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
+    # OPEN IN APPEND MODE
+    with open(OUTPUT_FILE, 'a', encoding='utf-8') as f:
         for i, pid in enumerate(target_ids):
             try:
                 if i % 10 == 0: 
