@@ -34,31 +34,40 @@ ACDT is a **Domain-Specific Market Insight Automation System** that mimics the r
      export NEO4J_PASSWORD="password"
      ```
 
-### Running the System
+### Deployment & Training (Production)
 
-**1. Start the API & Dashboard:**
-```bash
-./deploy.sh
-```
-This will launch:
-- **API**: http://localhost:8000
-- **Dashboard**: http://localhost:8501
+Since the local machine lacks a powerful GPU, use the pre-packaged archive to deploy to your server (RTX 3090).
 
-**2. Fine-tuning (Optional):**
-To train the model on your 10-year corpus:
+**1. Transfer to Server**
+The project is already packed into `autowein_production.tar.gz`. Copy it to your GPU server:
 ```bash
-python3 src/training/train_finetune.py
+scp autowein_production.tar.gz [USER]@[SERVER_IP]:~/
 ```
+
+**2. Run Training on Server**
+SSH into the server and execute the training script:
+```bash
+ssh [USER]@[SERVER_IP]
+# On the server:
+tar -xzf autowein_production.tar.gz
+chmod +x run_training_on_server.sh
+./run_training_on_server.sh
+```
+This will:
+- Build the `autowein-trainer` Docker image.
+- Run `src/training/train_finetune.py` on GPUs 1 & 2.
+- Generate the final model adapter in `models/autowein_finetuned`.
 
 ## Directory Structure
 ```
 src/
-├── core/           # Data models & Config loader
-├── gatekeeper/     # Scraper & IRL Engine
+├── core/           # Data models & Config
+├── gatekeeper/     # Real News Scraper (BeautifulSoup)
 ├── historian/      # Neo4j Graph Manager
 ├── analyst/        # Agents (Planner, Simulator, Writer)
 ├── editor/         # Critic Engine
-├── api/            # FastAPI Application
-├── dashboard/      # Streamlit UI
-└── training/       # Fine-tuning scripts
+├── crawler/        # [NEW] Native 10-Year History Crawler
+├── training/       # [NEW] Fine-tuning Pipeline
+├── api/            # FastAPI App
+└── dashboard/      # Streamlit Demo
 ```
