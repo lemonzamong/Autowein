@@ -1,0 +1,35 @@
+domain_name: "Mobility & EV"
+
+entity_types:
+  - "Company"
+  - "Person"
+  - "Country"
+  - "Technology"
+  - "Policy"
+
+relation_types:
+  - "imposes_tariff_on"
+  - "acquires"
+  - "sues"
+  - "releases_product"
+  - "partners_with"
+  - "regulates"
+
+event_types:
+  - "Product_Launch"
+  - "M&A"
+  - "Regulation_Change"
+  - "Trade_War"
+
+keywords:
+  - "EV"
+  - "Autonomous Driving"
+  - "Battery"
+  - "Tariff"
+  - "Tesla"
+  - "BYD"
+
+sources:
+  - "https://techcrunch.com/category/transportation/"
+  - "https://www.reuters.com/business/autos-transportation/"
+  - "https://electrek.co/"

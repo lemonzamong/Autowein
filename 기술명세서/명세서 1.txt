@@ -1,0 +1,159 @@
+이 문서는 개발자가 **"아, 이 클라이언트는 AI의 구조를 정확히 이해하고 있고, 단순히 요약 봇을 만드는 게 아니라 '가상 분석가(Virtual Analyst)'를 만들려고 하는구나"**라고 즉시 파악할 수 있도록 작성된 **최상위 레벨의 기술 명세서(Technical Requirement Specification)**입니다.
+
+이 파일을 그대로 PDF로 변환해서 전달하시면 됩니다.
+
+[Technical Specification]
+Project: Autowein’s Cognitive Digital Twin (ACDT)
+Domain-Specific Market Insight Automation System via GraphRAG & Agentic Workflow
+
+1. 프로젝트 개요 (Executive Summary)
+1.1. 프로젝트 정의
+본 프로젝트는 지난 10년간 모빌리티/자율주행/EV 분야에서 축적된 뉴스 선별(Selection), 요약(Summarization), 및 심층 코멘트(Insight Commentary) 데이터를 기반으로, 운영자의 분석 프로세스를 모방하는 인공지능 에이전트 시스템을 구축하는 것입니다.
+
+1.2. 핵심 목표
+단순한 뉴스 요약이 아닙니다. 이 시스템의 목표는 **"운영자(Autowein)의 페르소나와 통찰력을 복제"**하는 것입니다.
+
+Contextual Reasoning: 과거 10년의 히스토리를 기반으로 현재 사건의 인과관계를 설명해야 함.
+
+Strategic Simulation: 특정 뉴스가 시장에 미칠 파급력을 시뮬레이션하여 코멘트에 반영해야 함.
+
+Autonomous Curation: 매일 쏟아지는 수천 건의 뉴스 중 운영자의 기준에 부합하는 Top 10을 선별해야 함.
+
+2. 보유 데이터 자산 및 전처리 요구사항 (Data Asset & Preprocessing)
+2.1. 데이터셋 명세 (Input Data)
+기간: 10년 (약 3,650일)
+
+일일 데이터 구조:
+
+Raw News Pool: 전세계에서 수집된 수백 건의 뉴스 원문.
+
+Selected List: 그중 선별된 10~15건의 뉴스.
+
+Generated Output:
+
+Summary: 팩트 위주의 요약.
+
+Autowein's Comment: (핵심) 해당 뉴스의 배경, 전망, 비평이 담긴 전문가 코멘트.
+
+2.2. 데이터 전처리 미션 (Knowledge Graph Construction)
+[필수 과제] 텍스트 데이터를 단순 벡터(Vector)로 변환하는 것을 넘어, **시계열 지식 그래프(Temporal Knowledge Graph)**로 변환해야 합니다.
+
+Extraction Schema:
+
+Entity: 기업(Tesla, BYD), 인물(Elon Musk, Gavin Newsom), 국가(Canada, China), 기술(FSD, LFP Battery), 정책(USMCA, IRA).
+
+Relation: imposes_tariff_on, acquires, sues, releases_product, partners_with.
+
+Attribute: Event_Date, Sentiment, Impact_Score.
+
+Graph DB Requirement: Neo4j 또는 ArangoDB를 사용하여 10년치 사건의 인과관계 사슬을 구축할 것.
+
+예시: (Canada) -[IMPOSES_TARIFF {date: 2024-10-01}]-> (Chinese EV)
+
+3. 시스템 아키텍처 및 상세 로직 (System Architecture)
+본 시스템은 4단계 파이프라인으로 구성되며, 각 단계는 고도화된 AI 모델과 에이전트에 의해 수행됩니다.
+
+Phase 1: The Gatekeeper (뉴스 수집 및 선별)
+Goal: 운영자의 뉴스 선정 기준(Taste)을 완벽히 학습하여 노이즈를 제거.
+
+Logic: Inverse Reinforcement Learning (IRL) & Hybrid Ranking
+
+Semantic Filter: 뉴스 내용이 모빌리티/Tech 도메인과 얼마나 유사한가? (Embedding Similarity)
+
+Impact Scorer: 과거 운영자가 선택한 뉴스들의 패턴(키워드, 주체, 감성)을 학습한 분류기가 점수 부여.
+
+Check Point: 단순 제품 출시는 점수가 낮으나, '정부 규제'나 'M&A' 키워드가 포함되면 가중치 부여.
+
+Deduplication: 중복 기사를 클러스터링하여 대표 기사 1개만 선정.
+
+Phase 2: The Historian (GraphRAG 기반 맥락 검색)
+Goal: 현재 뉴스와 연관된 "10년 전 사건"까지 찾아내어 맥락(Context)을 제공.
+
+Logic: Graph-based Retrieval
+
+입력된 뉴스에서 Entity(예: Canada, China, EV)를 추출하여 Knowledge Graph를 탐색.
+
+Multi-hop Reasoning: 직접적인 키워드 매칭뿐만 아니라, 2~3단계 건너뛴 인과관계를 추적.
+
+Query Path: [Current: Canada-China Deal] <- (Why?) <- [Past: Canada Tariffs] <- (Why?) <- [Past: US Pressure / USMCA]
+
+이 과정을 통해 "관련 과거 기사(Related Contents)" 리스트를 자동 생성.
+
+Phase 3: The Analyst (코멘트 생성 및 시뮬레이션)
+Goal: 운영자의 문체와 통찰력을 모방하여 코멘트 작성.
+
+Logic: Multi-Agent Orchestration (LangGraph / AutoGen)
+
+Agent A (Planner): 검색된 과거 데이터와 현재 뉴스를 조합하여 글의 개요(Outline)를 작성. ("서론에서는 USMCA를 언급하고, 본론에서는 농업 분야의 타격을 다루자.")
+
+Agent B (Writer - Fine-tuned LLM): 10년치 데이터로 Fine-tuning된 모델(GPT-4o or Llama 3)이 개요를 바탕으로 초안 작성. 운영자 특유의 어조(Tone & Manner) 적용.
+
+Agent C (Simulator - World Model): "만약 이 합의가 없었다면?"이라는 반사실적 질문(Counterfactual Question)을 던져보고, 그에 대한 답변을 코멘트에 추가하여 깊이를 더함.
+
+Phase 4: The Editor (자기 비판 및 품질 검증)
+Goal: AI가 쓴 글의 환각(Hallucination)을 방지하고 퀄리티 보장.
+
+Logic: Self-Correction
+
+Critic Agent: 다음 기준에 따라 초안을 채점.
+
+Factuality: 뉴스 원문 및 과거 데이터와 일치하는가?
+
+Insight: 단순 요약인가, 아니면 전망이 포함되었는가?
+
+Style: 운영자(Autowein)의 문체와 얼마나 유사한가?
+
+점수가 기준(Threshold) 미달일 경우, 구체적인 수정 지시사항과 함께 Agent B에게 재작성 요청 (최대 3회 반복).
+
+4. 기술 스택 권장안 (Recommended Tech Stack)
+개발사는 아래의 스택을 사용하거나, 동등 이상의 성능을 내는 대안을 제시해야 합니다.
+
+LLM Core: GPT-4o (Reasoning & Writing) + OpenAI o1 (Complex Planning) 또는 Llama 3 70B (Fine-tuning용).
+
+Orchestration: LangChain (LangGraph) 또는 Microsoft AutoGen (필수).
+
+Database:
+
+Vector DB: Pinecone, Milvus (임베딩 검색용).
+
+Graph DB: Neo4j (인과관계 추적용 - 가장 중요).
+
+Backend: Python (FastAPI), Celery (비동기 작업 처리).
+
+ML Ops: HuggingFace TRL (Fine-tuning 및 DPO 학습용), WandB (실험 추적).
+
+5. 산출물 및 개발 단계 (Deliverables & Milestones)
+Phase 1: Brain Building (1.5개월)
+10년치 데이터 정제 및 Knowledge Graph 구축 (Neo4j).
+
+운영자 문체 학습을 위한 LLM Fine-tuning (LoRA/QLoRA) 완료.
+
+중간 점검: 과거 특정 날짜의 뉴스를 넣었을 때, 과거 운영자가 쓴 코멘트와 유사한 글을 뱉어내는지 테스트.
+
+Phase 2: Engine Assembly (1.5개월)
+뉴스 수집기 및 IRL 기반 선별 엔진 구현.
+
+GraphRAG + Multi-Agent(Writer/Critic) 파이프라인 구현.
+
+중간 점검: 오늘자 뉴스를 넣었을 때, "과거 맥락"을 얼마나 잘 찾아내는지 확인.
+
+Phase 3: Dashboard & Loop (1개월)
+운영자가 AI의 결과물을 수정(Edit)하고 발행할 수 있는 웹 대시보드.
+
+Human Feedback Loop: 운영자가 수정한 내용이 다시 DB로 들어가 모델을 재학습(DPO)시키는 자동화 파이프라인 구축.
+
+6. 개발사 선정 및 검수 기준 (Acceptance Criteria)
+본 프로젝트의 완료 기준은 단순 기능 작동이 아니라 **'품질'**입니다.
+
+Style Cloning: 블라인드 테스트 시, AI가 작성한 코멘트와 운영자가 작성한 코멘트를 제3자가 구별하지 못해야 함 (유사도 90% 이상).
+
+Context Retrieval: 코멘트 작성 시, **최소 1건 이상의 과거 연관 사건(1년 이상 된 사건)**을 논리적으로 인용해야 함.
+
+Zero Hallucination: 뉴스 원문에 없는 숫자가 날조되어 포함되지 않아야 함 (검증 에이전트 통과 필수).
+
+[개발자에게 보내는 메시지]
+"우리는 단순한 자동화 툴을 원하지 않습니다. 10년치 데이터를 기억(Memory)으로 가지고, 사고(Reasoning)할 수 있는 디지털 파트너를 원합니다. Knowledge Graph와 Agent 구조 없이는 불가능한 프로젝트임을 인지하고, 이에 맞는 High-end 엔지니어링 설계를 제안해 주십시오."
+
+[사이트]
+https://autowein.com/
+ID :june2450@naver.com / PW : jun2450

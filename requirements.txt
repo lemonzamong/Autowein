@@ -1,0 +1,27 @@
+fastapi
+uvicorn
+pydantic
+pydantic-settings
+networkx
+langchain
+langchain-community
+langchain-openai
+langgraph
+pyyaml
+pytest
+httpx
+# Production Additions
+neo4j
+openai
+beautifulsoup4
+newspaper3k
+lxml
+streamlit
+pandas
+sh
+# ML (uncomment for training server)
+# torch
+# transformers
+# peft
+# trl
+# datasets
