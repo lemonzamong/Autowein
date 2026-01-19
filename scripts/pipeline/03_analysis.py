@@ -8,6 +8,7 @@ from typing import List, Dict
 # Add project root to path
 sys.path.append(os.path.join(os.path.dirname(__file__), "../.."))
 
+from src.core.config import ConfigLoader
 from src.core.models import NewsItem, Commentary
 from src.historian.engine import HistorianEngine
 from src.historian.graph_db import Neo4jGraph
@@ -75,9 +76,12 @@ def run_stage3():
     graph = Neo4jGraph() # Will check env vars or default
     historian = HistorianEngine(graph_db=graph)
     
-    # Analyst: Check for Key
-    gemini_key = os.getenv("GOOGLE_API_KEY", "AIzaSyDQX66EWC_ksMdMM2aLlbMImDLJvt6u-_I") # User provided key as fallback
-    api_key = os.getenv("OPENAI_API_KEY")
+    # Analyst: Check for Keys via Config
+    loader = ConfigLoader("config/mobility.yaml")
+    config = loader.load()
+    
+    gemini_key = config.api_keys.get('google_gemini') or os.getenv("GOOGLE_API_KEY")
+    api_key = config.api_keys.get('openai') or os.getenv("OPENAI_API_KEY")
     
     use_gemini = True
     use_openai = False

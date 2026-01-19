@@ -19,6 +19,7 @@ def run_stage1():
     
     # 2. Initialize Engine
     engine = GatekeeperEngine(config)
+    print(f"DEBUG: Loaded API Keys: {list(config.api_keys.keys())}")
     
     # 3. Fetch & Filters (IRL)
     today = datetime.now().strftime("%Y-%m-%d")
@@ -26,23 +27,58 @@ def run_stage1():
     os.makedirs(output_dir, exist_ok=True)
 
     # 3. Fetch & Filters (IRL)
-    print(">>> Scraping and Scoring...")
-    all_items = engine.fetch_and_select()
-
-    # [NEW] Save Raw Fetched Data (0_searched.json)
     raw_output_path = f"{output_dir}/0_searched.json"
     
-    from dataclasses import asdict
+    # Define Encoder for reuse
     class DateTimeEncoder(json.JSONEncoder):
         def default(self, o):
             if isinstance(o, datetime):
                 return o.isoformat()
             return super().default(o)
+
+    if os.path.exists(raw_output_path):
+        print(f">>> [Cache Hit] Found existing data at {raw_output_path}. Loading...")
+        with open(raw_output_path, 'r', encoding='utf-8') as f:
+            cached_data = json.load(f)
             
-    raw_dicts = [asdict(item) for item in all_items]
-    with open(raw_output_path, 'w', encoding='utf-8') as f:
-        json.dump(raw_dicts, f, indent=4, ensure_ascii=False, cls=DateTimeEncoder)
-    print(f">>> [Archive] Saved {len(all_items)} raw items to {raw_output_path}")
+        all_items = []
+        for d in cached_data:
+            # Reconstruct datetime from isoformat
+            if 'published_at' in d and isinstance(d['published_at'], str):
+                try: d['published_at'] = datetime.fromisoformat(d['published_at'])
+                except: pass
+            
+            # Simple reconstruction
+            item = NewsItem(
+                id=d.get('id'),
+                title=d.get('title'),
+                content=d.get('content'),
+                url=d.get('url'),
+                published_at=d.get('published_at'),
+                source=d.get('source'),
+                author=d.get('author', 'Unknown'),
+                image_url=d.get('image_url', ''),
+                tags=d.get('tags', []),
+                relevance_score=d.get('relevance_score', 0.0),
+                scores_breakdown=d.get('scores_breakdown', {}),
+                selected=d.get('selected', False),
+                related_items=[] 
+            )
+            all_items.append(item)
+        print(f">>> Loaded {len(all_items)} items from cache.")
+        
+    else:
+        print(">>> Scraping and Scoring...")
+        all_items = engine.fetch_and_select()
+
+        # [NEW] Save Raw Fetched Data (0_searched.json)
+        from dataclasses import asdict
+        # Encoder is now defined above
+            
+        raw_dicts = [asdict(item) for item in all_items]
+        with open(raw_output_path, 'w', encoding='utf-8') as f:
+            json.dump(raw_dicts, f, indent=4, ensure_ascii=False, cls=DateTimeEncoder)
+        print(f">>> [Archive] Saved {len(all_items)} raw items to {raw_output_path}")
     
     # 4. Filter for Previous 24 Hours (Yesterday's News)
     # E.g. If specific "yesterday" logic is needed (00:00-23:59 of previous day)
@@ -79,8 +115,10 @@ def run_stage1():
     
     # 5. [Stage 1.8] LLM Re-ranking (The Judge)
     from src.gatekeeper.judge import Judge
-    gemini_key = "AIzaSyDQX66EWC_ksMdMM2aLlbMImDLJvt6u-_I" # User provided
-    api_key = os.getenv("OPENAI_API_KEY")
+    
+    # Load keys from config (or env vars as fallback)
+    gemini_key = config.api_keys.get('google_gemini') or os.getenv("GOOGLE_API_KEY")
+    api_key = config.api_keys.get('openai') or os.getenv("OPENAI_API_KEY")
     
     use_gemini = True
     active_key = gemini_key if (use_gemini and gemini_key) else api_key

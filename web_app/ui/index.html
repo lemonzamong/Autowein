@@ -436,6 +436,16 @@
         </div>
 
         <div class="nav-group">
+            <div class="nav-label">Management</div>
+            <button class="nav-item" id="view-curation-btn" onclick="switchView('curation')">
+                <span>Curation (Stage 2)</span>
+            </button>
+            <button class="nav-item" id="view-settings-btn" onclick="switchView('settings')">
+                <span>Settings</span>
+            </button>
+        </div>
+
+        <div class="nav-group">
             <div class="nav-label">Stages</div>
             <button class="nav-item" id="btn-s1" onclick="runStage('1')">
                 <span>01 Selection</span>
@@ -505,6 +515,40 @@
             <div class="result-container" id="result-content">
                 <div style="text-align: center; color: #6b7280; padding: 2rem;">
                     Select a date to view results.
+                </div>
+            </div>
+        </div>
+
+        <!-- SETTINGS VIEW (Config) -->
+        <div id="view-settings" class="view-section">
+            <div class="result-container">
+                <div class="result-title">RSS Sources</div>
+                <textarea id="cfg-sources"
+                    style="width:100%; height:150px; font-family:monospace; padding:0.5rem; margin-bottom:1rem; border:1px solid #e5e7eb; border-radius:6px;"></textarea>
+
+                <div class="result-title">Trust List (Reputation Boost)</div>
+                <textarea id="cfg-trust"
+                    style="width:100%; height:100px; font-family:monospace; padding:0.5rem; margin-bottom:1rem; border:1px solid #e5e7eb; border-radius:6px;"></textarea>
+
+                <div class="result-title">Block List (Filter Out)</div>
+                <textarea id="cfg-block"
+                    style="width:100%; height:100px; font-family:monospace; padding:0.5rem; margin-bottom:1rem; border:1px solid #e5e7eb; border-radius:6px;"></textarea>
+
+                <button class="nav-item primary" style="width:auto;" onclick="saveConfig()">Save Configuration</button>
+            </div>
+        </div>
+
+        <!-- CURATION VIEW -->
+        <div id="view-curation" class="view-section">
+            <div class="result-container">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                    <h3>News Selection (<span id="curation-count">0</span> items)</h3>
+                    <button class="nav-item primary" style="width:auto;" onclick="saveCuration()">Confirm & Train
+                        Model</button>
+                </div>
+                <div id="curation-list" style="display:flex; flex-direction:column; gap:0.5rem;">
+                    <!-- Items go here -->
+                    <div style="text-align: center; color: #6b7280;">Loading candidates...</div>
                 </div>
             </div>
         </div>
@@ -595,118 +639,207 @@
             }
         }
 
-        // View Switcher
+        // View Switcher Extension
         function switchView(viewName) {
             document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
 
             document.getElementById(`view-${viewName}`).classList.add('active');
-            document.getElementById(`view-${viewName}-btn`).classList.add('active');
+            let btn = document.getElementById(`view-${viewName}-btn`) || document.getElementById(`btn-s${viewName}`);
+            // Check sidebar mapping
+            if (!btn) {
+                if (viewName === 'settings') btn = document.getElementById('view-settings-btn');
+                if (viewName === 'curation') btn = document.getElementById('view-curation-btn');
+            }
+            if (btn) btn.classList.add('active');
 
             const dateSelect = document.getElementById('date-selector');
             const clearBtn = document.getElementById('clear-btn');
             const refreshBtn = document.getElementById('refresh-btn');
 
+            // Reset Header Controls
+            dateSelect.style.display = 'none';
+            clearBtn.style.display = 'none';
+            refreshBtn.style.display = 'none';
+
             if (viewName === 'logs') {
                 document.getElementById('page-title').textContent = 'Live Logs';
                 document.getElementById('page-subtitle').textContent = 'Real-time pipeline execution status.';
-
-                dateSelect.style.display = 'none';
                 clearBtn.style.display = 'block';
-                refreshBtn.style.display = 'none';
-            } else {
+
+            } else if (viewName === 'results') {
                 document.getElementById('page-title').textContent = 'Pipeline Results';
                 document.getElementById('page-subtitle').textContent = 'Generating intelligence reports.';
-
                 dateSelect.style.display = 'block';
-                clearBtn.style.display = 'none';
                 refreshBtn.style.display = 'block';
+                fetchHistory().then(() => { if (dateSelect.value) loadResults(dateSelect.value); });
 
-                // Init load
-                fetchHistory().then(() => {
-                    const val = dateSelect.value;
-                    if (val) loadResults(val);
-                });
+            } else if (viewName === 'settings') {
+                document.getElementById('page-title').textContent = 'Configuration';
+                document.getElementById('page-subtitle').textContent = 'Manage Sources and Reputation Lists.';
+                loadConfig();
+
+            } else if (viewName === 'curation') {
+                document.getElementById('page-title').textContent = 'Human Curation';
+                document.getElementById('page-subtitle').textContent = 'Select news to train the Agent.';
+                loadCuration();
             }
         }
 
-        async function loadResults(dateStr) {
-            if (!dateStr) dateStr = 'latest';
+        // --- Config Logic ---
+        async function loadConfig() {
+            try {
+                const res = await fetch('/api/config');
+                const conf = await res.json();
 
-            const container = document.getElementById('result-content');
-            container.innerHTML = '<div style="text-align: center; color: #6b7280;">Fetching data...</div>';
+                // Parse lists to lines
+                document.getElementById('cfg-sources').value = (conf.sources || []).join('\n');
+                document.getElementById('cfg-trust').value = (conf.trust_list || conf.reputation?.trust_list || []).join('\n');
+                document.getElementById('cfg-block').value = (conf.block_list || conf.reputation?.block_list || []).join('\n');
+            } catch (e) {
+                alert("Failed to load config: " + e);
+            }
+        }
+
+        async function saveConfig() {
+            const data = {
+                sources: document.getElementById('cfg-sources').value.split('\n').filter(x => x.trim()),
+                trust_list: document.getElementById('cfg-trust').value.split('\n').filter(x => x.trim()),
+                block_list: document.getElementById('cfg-block').value.split('\n').filter(x => x.trim())
+            };
 
             try {
-                const res = await fetch(`/api/results/${dateStr}`);
+                const res = await fetch('/api/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                if (res.ok) alert("Configuration Saved!");
+                else alert("Error saving config");
+            } catch (e) {
+                alert("Error: " + e);
+            }
+        }
+
+        // --- Curation Logic ---
+        let currentCurationData = [];
+        let currentCurationDate = "";
+
+        async function loadCuration() {
+            const container = document.getElementById('curation-list');
+            container.innerHTML = '<div style="text-align: center; color: #6b7280;">Loading candidates...</div>';
+
+            try {
+                const res = await fetch('/api/curation/candidates');
                 const data = await res.json();
 
-                if (data.error) {
-                    container.innerHTML = `<div style="text-align: center; color: #dc2626;">Error: ${data.error}</div>`;
+                currentCurationDate = data.date;
+                currentCurationData = data.items || [];
+
+                document.getElementById('curation-count').textContent = currentCurationData.length;
+
+                if (currentCurationData.length === 0) {
+                    container.innerHTML = '<div style="text-align: center; color: #6b7280;">No candidates found. Run Stage 1 first.</div>';
                     return;
                 }
 
-                let html = `<div style="margin-bottom: 1.5rem; padding-bottom: 0.5rem; border-bottom: 1px solid #eee; color: #6b7280;">Data Date: ${data.date}</div>`;
+                let html = '';
+                currentCurationData.forEach((item, idx) => {
+                    // Default to selected (or check if 'selected' property exists in future)
+                    const isChecked = idx < 10 ? 'checked' : '';
 
-                // Report
-                if (data.report) {
-                    html += `<div class="md-content">${parseMarkdown(data.report)}</div>`;
-                } else {
-                    html += `<div class="result-card">No Final Report (Stage 4) found.</div>`;
-                }
+                    const relatedCount = (item.related_items || []).length;
+                    let relatedHtml = '';
 
-                if (data.analyzed) {
-                    html += `<h3>Analyzed Items (${data.analyzed.length})</h3>`;
+                    if (relatedCount > 0) {
+                        const listId = `rel-list-${idx}`;
+                        relatedHtml = `<div style="margin-top:0.5rem; padding:0.5rem; background:#f3f4f6; border-radius:4px; font-size:0.85rem;">
+                            <div onclick="document.getElementById('${listId}').style.display = document.getElementById('${listId}').style.display === 'none' ? 'block' : 'none'" 
+                                 style="font-weight:600; color:#4b5563; margin-bottom:0.25rem; cursor:pointer; user-select:none;">
+                                 ▶ + ${relatedCount} Related Items (Click to View)
+                            </div>
+                            <ul id="${listId}" style="display:none; padding-left:1.2rem; margin-bottom:0; color:#6b7280; margin-top:0.5rem;">`;
 
-                    data.analyzed.forEach((item, index) => {
-                        const isHidden = index >= 3;
-                        const style = isHidden ? 'display:none;' : '';
-                        const className = isHidden ? 'result-card hidden-item' : 'result-card';
+                        item.related_items.forEach(rel => {
+                            // Handle object or dict safely
+                            let rTitle = rel.title || 'Unknown';
+                            let rSource = rel.source || 'Unknown';
+                            let rUrl = rel.url || '#';
 
-                        html += `
-                        <div class="${className}" style="${style}">
-                            <div class="result-title">${item.title} <span style="font-size:0.8em; color: #059669;">Score: ${item.confidence_score || 'N/A'}</span></div>
-                            <div class="result-meta">${(item.content || '').substring(0, 150)}...</div>
-                        </div>`;
-                    });
+                            // If it's a dictionary-like object property check
+                            if (rel.get) {
+                                // Fallback for some JS proxies if any
+                            }
 
-                    if (data.analyzed.length > 3) {
-                        html += `<button id="show-more-btn" onclick="showAllItems()" style="color:#2563eb; font-size: 0.9rem; background:none; border:none; cursor:pointer; padding:0; margin-top:0.5rem;">+ ${data.analyzed.length - 3} more items...</button>`;
+                            // Removed dotted border style to fix aesthetics
+                            relatedHtml += `<li><a href="${rUrl}" target="_blank" style="color:inherit; text-decoration:none;">${rTitle}</a></li>`;
+                        });
+                        relatedHtml += `</ul></div>`;
                     }
-                }
 
+                    html += `
+                    <div class="result-card" style="display:flex; gap:1rem; align-items:start;">
+                        <input type="checkbox" id="cur-chk-${idx}" ${isChecked} style="margin-top:0.3rem; transform:scale(1.2);">
+                        <div style="flex:1;">
+                            <div class="result-title">
+                                <a href="${item.url}" target="_blank" style="color:inherit; text-decoration:none; border-bottom:1px solid #d1d5db;">${item.title}</a>
+                                <!-- Source removed as requested to hide long RSS URLs -->
+                            </div>
+                            <div class="result-meta">${(item.content || '').substring(0, 200)}...</div>
+                            <div style="font-size:0.8em; margin-top:0.3rem; color:#059669;">Score: ${item.relevance_score?.toFixed(4) || 'N/A'}</div>
+                            ${relatedHtml}
+                        </div>
+                    </div>`;
+                });
                 container.innerHTML = html;
 
             } catch (e) {
-                container.innerHTML = `<div style="text-align: center; color: #dc2626;">Failed to load results: ${e}</div>`;
+                container.innerHTML = 'Error loading candidates: ' + e;
             }
         }
 
-        function showAllItems() {
-            document.querySelectorAll('.hidden-item').forEach(el => el.style.display = 'block');
-            document.getElementById('show-more-btn').style.display = 'none';
-        }
+        async function saveCuration() {
+            if (!currentCurationData.length) return;
 
-        function parseMarkdown(md) {
-            // Very basic parser for demo
-            return md
-                .replace(/^# (.*$)/gim, '<h1>$1</h1>')
-                .replace(/^## (.*$)/gim, '<h2>$1</h2>')
-                .replace(/^### (.*$)/gim, '<h3>$1</h3>')
-                .replace(/^\> (.*$)/gim, '<blockquote>$1</blockquote>')
-                .replace(/\*\*(.*)\*\*/gim, '<b>$1</b>')
-                .replace(/\n/gim, '<br>');
-        }
+            // Gather selected items
+            const selectedItems = [];
+            currentCurationData.forEach((item, idx) => {
+                const chk = document.getElementById(`cur-chk-${idx}`);
+                if (chk && chk.checked) {
+                    selectedItems.push(item);
+                }
+            });
 
-        async function runStage(id) {
-            switchView('logs');
-            const btn = document.getElementById(`btn-s${id}`);
-            btn.classList.add('running');
+            if (!confirm(`Save ${selectedItems.length} items and train model?`)) return;
+
             try {
-                await fetch(`/api/run/${id}`, { method: 'POST' });
+                // Switch to logs to see training
+                switchView('logs');
+
+                const res = await fetch('/api/curation/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        date: currentCurationDate,
+                        items: selectedItems
+                    })
+                });
+
             } catch (e) {
-                appendLog(`\u001b[1;31mError connecting to server: ${e}\u001b[0m`);
-            } finally {
-                setTimeout(() => btn.classList.remove('running'), 1000);
+                alert("Error saving: " + e);
+            }
+        }
+
+
+        async function runStage(stageId) {
+            switchView('logs');
+            const btn = document.getElementById(`btn-s${stageId}`);
+            if (btn) btn.classList.add('active');
+
+            try {
+                await fetch(`/api/run/${stageId}`, { method: 'POST' });
+            } catch (e) {
+                appendLog(`Error connecting to server: ${e}`);
             }
         }
 

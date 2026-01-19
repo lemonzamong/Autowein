@@ -109,7 +109,135 @@ async def run_all():
             await run_script(STAGE_MAP[stage])
             
     asyncio.create_task(run_sequence())
+    asyncio.create_task(run_sequence())
     return {"status": "started_sequence"}
+
+# --- Config Management ---
+@app.get("/api/config")
+async def get_config():
+    config_path = os.path.join(BASE_DIR, "config", "mobility.yaml")
+    if os.path.exists(config_path):
+        import yaml
+        with open(config_path, 'r', encoding='utf-8') as f:
+            return yaml.safe_load(f)
+    return {}
+
+class ConfigUpdate(BaseModel):
+    sources: List[str]
+    trust_list: List[str]
+    block_list: List[str]
+
+@app.post("/api/config")
+async def update_config(data: ConfigUpdate):
+    config_path = os.path.join(BASE_DIR, "config", "mobility.yaml")
+    import yaml
+    
+    # Read existing to preserve comments/structure if possible? 
+    # PyYAML safe_dump wipes comments. For now, simple dump is acceptable for this level of UI.
+    # To preserve, we'd need round-trip parser like 'ruamel.yaml'. 
+    # User just wants function.
+    
+    # Load current to preserve other fields like 'domain_name'
+    current = {}
+    if os.path.exists(config_path):
+        with open(config_path, 'r', encoding='utf-8') as f:
+            current = yaml.safe_load(f) or {}
+            
+    current['sources'] = data.sources
+    
+    # Update reputation
+    if 'reputation' not in current:
+        current['reputation'] = {}
+        
+    current['reputation']['trust_list'] = data.trust_list
+    current['reputation']['block_list'] = data.block_list
+    
+    with open(config_path, 'w', encoding='utf-8') as f:
+        yaml.safe_dump(current, f, allow_unicode=True, default_flow_style=False)
+        
+    return {"status": "updated"}
+
+# --- Curation ---
+@app.get("/api/curation/candidates")
+async def get_candidates():
+    # Load latest Items from Stage 1
+    # Check data/daily/YYYY-MM-DD/1_selected_ranked.json
+    # Find latest date
+    data_dir = os.path.join(BASE_DIR, "data", "daily")
+    if not os.path.exists(data_dir):
+        return []
+    
+    dates = sorted(os.listdir(data_dir), reverse=True)
+    if not dates:
+        return []
+        
+    latest_date = dates[0]
+    file_path = os.path.join(data_dir, latest_date, "1_selected_ranked.json")
+    
+    if os.path.exists(file_path):
+        with open(file_path, 'r', encoding='utf-8') as f:
+            return {"date": latest_date, "items": json.load(f)}
+            
+    return {"date": latest_date, "items": []}
+
+class CurationItem(BaseModel):
+    id: str
+    title: str
+    content: str
+    url: str
+    source: str
+    published_at: str
+
+class CurationPayload(BaseModel):
+    date: str
+    items: List[dict] # Full object to save
+
+@app.post("/api/curation/save")
+async def save_curation(payload: CurationPayload):
+    # Save to 2_curated.json
+    target_dir = os.path.join(BASE_DIR, "data", "daily", payload.date)
+    os.makedirs(target_dir, exist_ok=True)
+    
+    save_path = os.path.join(target_dir, "2_curated.json")
+    
+    with open(save_path, 'w', encoding='utf-8') as f:
+        json.dump(payload.items, f, indent=4, ensure_ascii=False)
+        
+    await broadcast_log(f"\n\u001b[1;32m=== Curation Saved ({len(payload.items)} items) ===\u001b[0m\n")
+    
+    # Trigger Auto-Training
+    # We can run it as a script task
+    await broadcast_log(f"\u001b[1;36m=== Triggering Auto-Training (Active Learning) ===\u001b[0m\n")
+    
+    # Run tools/train_irl.py
+    script_path = os.path.join(BASE_DIR, "scripts", "tools", "train_irl.py")
+    
+    # Non-blocking run
+    asyncio.create_task(run_custom_script(script_path))
+    
+    return {"status": "saved_and_training"}
+
+async def run_custom_script(script_path):
+    # Re-use run logic but for specific path
+    venv_python = os.path.join(BASE_DIR, "venv", "bin", "python")
+    env = os.environ.copy()
+    env["PYTHONUNBUFFERED"] = "1"
+    env["PYTHONPATH"] = BASE_DIR
+    
+    process = await asyncio.create_subprocess_exec(
+        venv_python, script_path,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.STDOUT,
+        cwd=BASE_DIR,
+        env=env
+    )
+    
+    if process.stdout:
+        while True:
+            line = await process.stdout.readline()
+            if not line: break
+            await broadcast_log(line.decode())
+    await process.wait()
 
 @app.websocket("/api/ws/logs")
 async def websocket_endpoint(websocket: WebSocket):

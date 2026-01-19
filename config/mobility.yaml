@@ -1,5 +1,9 @@
 domain_name: "Mobility & EV"
 
+api_keys:
+  google_gemini: "AIzaSyBGaqVm2OClUwkNPtX6tceQ9VTaYCSeRYs"
+  openai: "" # Optional (or set via OPENAI_API_KEY env var)
+
 sources:
   # --- US (English) ---
   # Split 1: EV General

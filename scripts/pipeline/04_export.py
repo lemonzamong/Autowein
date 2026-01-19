@@ -7,6 +7,7 @@ from datetime import datetime
 sys.path.append(os.path.join(os.path.dirname(__file__), "../.."))
 
 from src.analyst.llm import GeminiClient, OpenAIClient
+from src.core.config import ConfigLoader
 
 def get_mermaid_chart(client, content):
     prompt = f"""
@@ -46,7 +47,11 @@ def run_stage4():
     
     # Initialize Viz LLM
     # Initialize Viz LLM
-    gemini_key = os.getenv("GOOGLE_API_KEY", "AIzaSyDQX66EWC_ksMdMM2aLlbMImDLJvt6u-_I")
+    loader = ConfigLoader("config/mobility.yaml")
+    config = loader.load()
+    
+    gemini_key = config.api_keys.get('google_gemini') or os.getenv("GOOGLE_API_KEY")
+    
     if not gemini_key:
         print("Warning: GOOGLE_API_KEY not found. Visualization may fail.")
     viz_llm = GeminiClient(api_key=gemini_key) # Use Gemini for chart gen for speed/cost
