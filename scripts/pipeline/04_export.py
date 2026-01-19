@@ -45,7 +45,10 @@ def run_stage4():
     print(f">>> Transforming {len(data)} analyses into final report...")
     
     # Initialize Viz LLM
-    gemini_key = "AIzaSyBvnusuo4TjwjmjGf8xOY-Ezhqtro-VOjU"
+    # Initialize Viz LLM
+    gemini_key = os.getenv("GOOGLE_API_KEY", "AIzaSyDQX66EWC_ksMdMM2aLlbMImDLJvt6u-_I")
+    if not gemini_key:
+        print("Warning: GOOGLE_API_KEY not found. Visualization may fail.")
     viz_llm = GeminiClient(api_key=gemini_key) # Use Gemini for chart gen for speed/cost
     
     # 2. Format MD/HTML

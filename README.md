@@ -14,7 +14,7 @@ The system operates as a sequential 4-stage pipeline, orchestrated by either a C
 graph TD
     subgraph Stage 1: Gatekeeper
     A[Raw News Stream] -->|Scraper| B(Hybrid Scoring Engine)
-    B -->|SBERT + TF-IDF| C{Threshold Check}
+    B -->|SBERT + TF-IDF + IRL| C{Threshold Check}
     C -->|Pass| D[Diversity Clustering]
     D -->|Grouping| E[1_selected_ranked.json]
     end
@@ -23,6 +23,10 @@ graph TD
     E -->|Streamlit/Web UI| F(Human Expert Review)
     F -->|Select Top 10| G[2_curated.json]
     end
+
+    %% Active Learning Loop
+    G -.->|Active Learning| Lrn(RL Weight Update)
+    Lrn -.->|Update Policy| B
 
     subgraph Stage 3: Cognitive Analysis
     G --> H(Historian Engine)
@@ -127,8 +131,8 @@ python -m spacy download en_core_web_sm
 
 ### 3. Configuration
 Edit `config/mobility.yaml` to customize:
-*   **Keywords**: Add new topics (e.g., "Solid State Battery").
-*   **Sources**: Add/Remove trusted news domains.
+*   **Sources**: Add/Remove trusted news domains (RSS Feed URLs).
+*   *(Note: Keyword weights are now learned automatically by the IRL model, so no manual config is needed.)*
 
 ---
 
@@ -150,6 +154,9 @@ Open **http://localhost:8000** in your browser.
 2.  **Pipeline Controls**:
     *   **Run Full Sequence**: Executes Stages 1 → 4 automatically.
     *   **Run Individual Stages**: Click specific buttons (01 Selection, 02 Curation, etc.) to run steps manually.
+
+### Active Learning Loop
+When you run **Stage 2 (Curation)** and save your preferences, the system will **automatically trigger the IRL Model Training**. You will see a "Brain Updating" indicator. This means the system gets smarter with every use.
 
 ---
 
@@ -187,4 +194,4 @@ Autowein/
 *   **Fix**: Ensure your Docker container is running (`docker ps`) and port 7687 is exposed.
 
 **Q: Where are the "Trained Weights" for the Score Model?**
-*   **Answer**: The system starts in "Simulation Mode" (Initialized Weights). As you curate news daily (Stage 2), data accumulates. Run `python scripts/tools/train_irl.py` periodically to train the model on your preferences.
+*   **Answer**: The system starts in "Simulation Mode" (Initialized Weights). As you curate news daily (Stage 2), data accumulates, and the model **automatically retrains** itself after every curation session (Active Learning).

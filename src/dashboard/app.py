@@ -7,7 +7,7 @@ import subprocess
 
 st.set_page_config(page_title="Autowein Curator", layout="wide")
 
-st.title("Autowein: Human-in-the-Loop Curator (Stage 1.5)")
+st.title("Autowein: Human-in-the-Loop Curator (Stage 2)")
 
 # 1. Select Date
 # Find all "1_selected.json" files
@@ -107,6 +107,20 @@ with st.form("selection_form"):
             
         st.success(f"Saved {len(curated_items)} items to {output_path}")
         
+        # 4. Trigger Automated Training (Active Learning)
+        try:
+            with st.spinner("🧠 Updating AI Reward Model based on your choices..."):
+                # Dynamically import to avoid path issues if possible, or add to path
+                import sys
+                sys.path.append(os.path.join(os.path.dirname(__file__), "../.."))
+                from scripts.tools.train_irl import train_irl_head
+                
+                # Redirect stdout to capture training logs if needed, or just run it
+                train_irl_head()
+            st.success("✅ AI Model Updated! The system is now smarter.")
+        except Exception as e:
+            st.error(f"Training failed: {e}")
+
         # Trigger Analysis?
         st.write("Generating analysis report...")
         # In a real app we might run this async or in a separate process.

@@ -76,7 +76,7 @@ def run_stage3():
     historian = HistorianEngine(graph_db=graph)
     
     # Analyst: Check for Key
-    gemini_key = "AIzaSyBvnusuo4TjwjmjGf8xOY-Ezhqtro-VOjU" # User provided
+    gemini_key = os.getenv("GOOGLE_API_KEY", "AIzaSyDQX66EWC_ksMdMM2aLlbMImDLJvt6u-_I") # User provided key as fallback
     api_key = os.getenv("OPENAI_API_KEY")
     
     use_gemini = True

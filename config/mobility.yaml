@@ -1,50 +1,11 @@
 domain_name: "Mobility & EV"
 
-entity_types:
-  - "Company"
-  - "Person"
-  - "Country"
-  - "Technology"
-  - "Policy"
-
-relation_types:
-  - "imposes_tariff_on"
-  - "acquires"
-  - "sues"
-  - "releases_product"
-  - "partners_with"
-  - "regulates"
-
-event_types:
-  - "Product_Launch"
-  - "M&A"
-  - "Regulation_Change"
-  - "Trade_War"
-
-weighted_keywords:
-  # Derived from 10-Year History Analysis (IRL)
-  # High Impact (Weight 1.0)
-  "자율주행": 1.0       # Autonomous
-  "중국 정부": 0.9      # Chinese Policy
-  "공장 건설": 0.8      # Factory/Capex
-  "신차 판매": 0.8      # Sales Data
-
-  # Medium Impact (Weight 0.7)
-  "EV": 0.7
-  "배터리": 0.7
-  "완성차 업체": 0.6    # OEM Strategy
-
-  # Contextual (Weight 0.4)
-  "시장": 0.4
-  "미국": 0.4
-
-
 sources:
   # US (English) - Last 24h
-  - "https://news.google.com/rss/search?q=Electric+Vehicle+OR+Automotive+Industry+when:1d&hl=en-US&gl=US&ceid=US:en"
+  - "https://news.google.com/rss/search?q=Electric+Vehicle+OR+Automotive+when:1d&hl=en-US&gl=US&ceid=US:en"
   # Korea (Korean) - Last 24h
-  - "https://news.google.com/rss/search?q=전기차+OR+자동차+산업+when:1d&hl=ko&gl=KR&ceid=KR:ko"
+  - "https://news.google.com/rss/search?q=전기차+OR+자동차+when:1d&hl=ko&gl=KR&ceid=KR:ko"
   # Japan (Japanese) - Last 24h
-  - "https://news.google.com/rss/search?q=電気自動車+OR+自動車産業+when:1d&hl=ja&gl=JP&ceid=JP:ja"
+  - "https://news.google.com/rss/search?q=電気自動車+OR+自動車+when:1d&hl=ja&gl=JP&ceid=JP:ja"
   # China Focus (English Proxy) - Last 24h
   - "https://news.google.com/rss/search?q=China+NEV+OR+China+Automotive+when:1d&hl=en-US&gl=US&ceid=US:en"

@@ -59,7 +59,7 @@ def run_stage1():
     
     # 5. [Stage 1.8] LLM Re-ranking (The Judge)
     from src.gatekeeper.judge import Judge
-    gemini_key = "AIzaSyBvnusuo4TjwjmjGf8xOY-Ezhqtro-VOjU" # User provided
+    gemini_key = "AIzaSyDQX66EWC_ksMdMM2aLlbMImDLJvt6u-_I" # User provided
     api_key = os.getenv("OPENAI_API_KEY")
     
     use_gemini = True
