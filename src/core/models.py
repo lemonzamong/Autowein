@@ -45,7 +45,12 @@ class NewsItem:
     url: str
     published_at: datetime
     source: str
-    # Metadata extracted by Gatekeeper
+    
+    # [NEW] Extended Metadata for Filtering
+    author: str = "Unknown"
+    image_url: str = ""
+    tags: List[str] = field(default_factory=list)
+
     # Metadata extracted by Gatekeeper
     relevance_score: float = 0.0
     scores_breakdown: Dict[str, float] = field(default_factory=dict)

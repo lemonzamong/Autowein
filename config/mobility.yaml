@@ -1,11 +1,175 @@
 domain_name: "Mobility & EV"
 
 sources:
-  # US (English) - Last 24h
-  - "https://news.google.com/rss/search?q=Electric+Vehicle+OR+Automotive+when:1d&hl=en-US&gl=US&ceid=US:en"
-  # Korea (Korean) - Last 24h
-  - "https://news.google.com/rss/search?q=전기차+OR+자동차+when:1d&hl=ko&gl=KR&ceid=KR:ko"
-  # Japan (Japanese) - Last 24h
-  - "https://news.google.com/rss/search?q=電気自動車+OR+自動車+when:1d&hl=ja&gl=JP&ceid=JP:ja"
-  # China Focus (English Proxy) - Last 24h
-  - "https://news.google.com/rss/search?q=China+NEV+OR+China+Automotive+when:1d&hl=en-US&gl=US&ceid=US:en"
+  # --- US (English) ---
+  # Split 1: EV General
+  - "https://news.google.com/rss/search?q=Electric+Vehicle+when:1d&hl=en-US&gl=US&ceid=US:en"
+  # Split 2: Auto Industry & Manufacturers
+  - "https://news.google.com/rss/search?q=Automotive+Industry+when:1d&hl=en-US&gl=US&ceid=US:en"
+  # Split 3: Specific Tech (Batteries, AV)
+  - "https://news.google.com/rss/search?q=Solid+State+Battery+OR+Autonomous+Driving+when:1d&hl=en-US&gl=US&ceid=US:en"
+  # Split 4: Automative
+  - "https://news.google.com/rss/search?q=Automotive+when:1d&hl=en-US&gl=US&ceid=US:en"
+  # Split 5: Vehicle
+  - "https://news.google.com/rss/search?q=Vehicle+when:1d&hl=en-US&gl=US&ceid=US:en"
+  
+  # --- Korea (Korean) ---
+  - "https://news.google.com/rss/search?q=전기차+when:1d&hl=ko&gl=KR&ceid=KR:ko"
+  - "https://news.google.com/rss/search?q=자동차+when:1d&hl=ko&gl=KR&ceid=KR:ko"
+  - "https://news.google.com/rss/search?q=자동차+산업+when:1d&hl=ko&gl=KR&ceid=KR:ko"
+  - "https://news.google.com/rss/search?q=배터리+3사+OR+현대차+when:1d&hl=ko&gl=KR&ceid=KR:ko"
+
+  # --- Japan (Japanese) ---
+  - "https://news.google.com/rss/search?q=電気自動車+when:1d&hl=ja&gl=JP&ceid=JP:ja"
+  - "https://news.google.com/rss/search?q=トヨタ+OR+ホンダ+OR+日産+when:1d&hl=ja&gl=JP&ceid=JP:ja"
+
+  # --- China Focus ---
+  - "https://news.google.com/rss/search?q=China+NEV+Sales+When:1d&hl=en-US&gl=US&ceid=US:en"
+  - "https://news.google.com/rss/search?q=BYD+OR+CATL+OR+Xiaomi+EV+when:1d&hl=en-US&gl=US&ceid=US:en"
+
+reputation:
+  # ---------------------------------------------------------
+  # [White List] 신뢰할 수 있는 정보원 (최종 보강)
+  # ---------------------------------------------------------
+  trust_list:
+    # [NEW] 1. Science & Academia (과학/학술 - 최상위 신뢰도)
+    # 단순 뉴스가 아니라 팩트와 연구 결과에 기반하므로 가장 정확함
+    - "nature"             # Nature (세계 최고 권위 과학 저널)
+    - "science"            # Science (AAAS, 네이처와 양대 산맥)
+    - "scientificamerican" # (대중 과학지 중 가장 권위 있음)
+    - "phys.org"           # (물리/공학/나노테크 최신 연구 속보)
+    - "newscientist"       # (영국 과학 주간지)
+    - "dongascience"       # 동아사이언스 (국내 과학 전문)
+    - "hellodd"            # 대덕넷 (대덕연구단지 및 국내 R&D 전문)
+
+    # [NEW] 2. Global Policy & Politics (국제 정세/정책)
+    # 비즈니스 규제나 외교 리스크 파악에 필수
+    - "politico"           # Politico (미국/유럽 정치 정책 전문)
+    - "thehill"            # The Hill (미 의회/법안 중심)
+    - "foreignpolicy"      # FP (외교 안보 전문)
+    - "foreignaffairs"     # (미국 외교협회 발간, 깊이 있는 분석)
+    - "axios"              # (짧고 간결한 팩트 중심, 미국 정치/경제)
+
+    # [NEW] 3. High-End Magazines (심층 분석/탐사 보도)
+    - "theatlantic"        # (긴 호흡의 심층 기사)
+    - "newyorker"          # (문화/사회 비평 및 탐사)
+    - "time"               # Time Magazine
+    - "sisaon"             # 시사저널 (국내 시사)
+    - "sisain"             # 시사IN (국내 시사)
+
+    # [NEW] 4. Major European & Asian Hubs (영미권 외 유력지)
+    - "straitstimes"       # The Straits Times (싱가포르 - 동남아 허브)
+    - "cna"                # Channel News Asia (아시아 전역 뉴스)
+    - "dw"                 # Deutsche Welle (독일)
+    - "france24"           # (프랑스 국제 뉴스)
+    - "euronews"           # (유럽 연합 관점)
+
+    # 5. Global Major Dailies (기존 + 보강)
+    - "washingtonpost"
+    - "theguardian"
+    - "usatoday"
+    - "latimes"
+    - "telegraph"
+    - "independent"
+    - "lemonde"
+    - "spiegel"
+    - "scmp"
+    - "japantimes"
+
+    # 6. Global Broadcasters (기존)
+    - "bbc"
+    - "cnn"
+    - "aljazeera"
+    - "nhk"
+    - "cbsnews"            # 미국 CBS (탐사보도 60 Minutes 등 유명)
+
+    # 7. Global Finance & Economy (기존)
+    - "reuters"
+    - "bloomberg"
+    - "financialtimes"
+    - "ft.com"
+    - "wsj"
+    - "nytimes"
+    - "cnbc"
+    - "economist"
+    - "marketwatch"
+    - "barrons"
+    - "qz"                 # Quartz (새로운 경제 트렌드)
+
+    # 8. Korean Major Dailies & Broadcast (기존 + 보강)
+    - "chosun"
+    - "joongang"
+    - "donga"
+    - "hani"
+    - "khan"
+    - "hankookilbo"
+    - "munhwa"
+    - "seoul"
+    - "kukmin"
+    - "segye"
+    - "yna"                # 연합뉴스
+    - "newsis"
+    - "news1"
+    - "kbs"
+    - "imnews"             # MBC
+    - "sbs"
+    - "ytn"
+    - "nocutnews"          # 노컷뉴스 (CBS)
+    - "pressian"           # 프레시안 (심층 분석 강점)
+
+    # 9. Korean Finance & Tech (기존)
+    - "hankyung"
+    - "mk"
+    - "sedaily"
+    - "mt"
+    - "fnnews"
+    - "bizwatch"
+    - "heraldcorp"
+    - "etnews"
+    - "zdnet"
+    - "bloter"
+    - "ddaily"
+    - "thelec"             # 디일렉 (부품/소재 전문)
+
+    # 10. Tech, AI & Mobility (기존 + 보강)
+    - "techcrunch"
+    - "theverge"
+    - "wired"
+    - "arstechnica"
+    - "venturebeat"        # AI/엔터프라이즈
+    - "electrek"
+    - "insideevs"
+    - "autonews"
+
+  # ---------------------------------------------------------
+  # [Block List] 필터링 대상
+  # ---------------------------------------------------------
+  block_list:
+    # 1. Algorithmic/Clickbait Finance
+    - "simplywall"
+    - "marketbeat"
+    - "zacks"
+    - "fool"
+    - "investorplace"
+    - "tipranks"
+    - "benzinga"
+
+    # 2. Press Release Wires
+    - "prnewswire"
+    - "businesswire"
+    - "globenewswire"
+    - "accesswire"
+    - "korea-newswire"
+
+    # 3. Low Quality / Viral / Tabloids
+    - "dailymail"
+    - "thesun"
+    - "nypost"
+    - "mirror.co.uk"
+    - "buzzfeed"           # (뉴스 부문 폐쇄/축소 후 바이럴 위주)
+    - "huffpost"           # (블로그성 기고가 많아 팩트 체크 필요 시 주의)
+    - "insight"            # 인사이트 (단순 SNS 인용 위주)
+    - "wikitree"           # 위키트리 (단순 SNS 인용 위주)
+    - "dispatch"           # 디스패치 (연예 가십 위주)
+    - "fmkorea"            # (커뮤니티 글이 검색에 잡히는 경우 제외)
+    - "dcinside"           # (커뮤니티 글이 검색에 잡히는 경우 제외)

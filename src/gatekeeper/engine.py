@@ -165,32 +165,14 @@ class GatekeeperEngine:
 
     def _calculate_reputation_score(self, item: NewsItem) -> float:
         """
-        [Deep IRL Engine v3.5] Source Reputation Learning
-        Manually curated lists until external link graph is built.
+        [Heuristic Reputation Module]
+        Uses domain/title matching against configured Trust/Block lists.
         """
         from urllib.parse import urlparse
         
-        # Known Low Quality / Spam / irrelevant
-        BLOCK_LIST = {
-            'simplywall.st', 'marketbeat', 'zacks', 'fool.com', 'investorplace', # Finance spam
-            'filmogaz', 'el-balad', 'speedme', 'industrytoday', # Low quality / Scrapers
-            'prweb', 'businesswire', 'globenewswire', 'prnewswire', # Press Releases
-            'cointelegraph', 'benzinga', 'tipranks' # Crypto/Stock spam
-        }
-        
-        # High Quality Global & Regional Trust
-        TRUST_LIST = {
-            # Global
-            'reuters', 'bloomberg', 'ft.com', 'wsj.com', 'nytimes', 'bbc', 'cnn',
-            'techcrunch', 'wired', 'theverge', 'arstechnica', 'cnbc',
-            # Automotive
-            'autonews', 'motortrend', 'caranddriver', 'electrek', 'insideevs',
-            # Korea
-            'hankyung', 'mk.co.kr', 'etnews', 'yonhap', 'chosun', 'joins', 'donga',
-            'zdnet', 'bloter', 
-            # Japan / China
-            'nikkei', 'scmp', 'asahi', 'yomiuri', 'caixing'
-        }
+        # Load from Config (or fallback to empty if missing)
+        BLOCK_LIST = set(getattr(self.config, 'block_list', []))
+        TRUST_LIST = set(getattr(self.config, 'trust_list', []))
 
         try:
             domain = urlparse(item.url).netloc.replace('www.', '')

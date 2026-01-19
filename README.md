@@ -13,10 +13,9 @@ The system operates as a sequential 4-stage pipeline, orchestrated by either a C
 ```mermaid
 graph TD
     subgraph Stage 1: Gatekeeper
-    A[Raw News Stream] -->|Scraper| B(Hybrid Scoring Engine)
-    B -->|SBERT + TF-IDF + IRL| C{Threshold Check}
-    C -->|Pass| D[Diversity Clustering]
-    D -->|Grouping| E[1_selected_ranked.json]
+    A[Raw News Stream] -->|Scraper| B[0_searched.json]
+    B -->|Hybrid Scoring Engine| C{Filter & Rank}
+    C -->|Top Selection| E[1_selected_ranked.json]
     end
 
     subgraph Stage 2: Curation

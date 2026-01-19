@@ -21,8 +21,28 @@ def run_stage1():
     engine = GatekeeperEngine(config)
     
     # 3. Fetch & Filters (IRL)
+    today = datetime.now().strftime("%Y-%m-%d")
+    output_dir = f"data/daily/{today}"
+    os.makedirs(output_dir, exist_ok=True)
+
+    # 3. Fetch & Filters (IRL)
     print(">>> Scraping and Scoring...")
     all_items = engine.fetch_and_select()
+
+    # [NEW] Save Raw Fetched Data (0_searched.json)
+    raw_output_path = f"{output_dir}/0_searched.json"
+    
+    from dataclasses import asdict
+    class DateTimeEncoder(json.JSONEncoder):
+        def default(self, o):
+            if isinstance(o, datetime):
+                return o.isoformat()
+            return super().default(o)
+            
+    raw_dicts = [asdict(item) for item in all_items]
+    with open(raw_output_path, 'w', encoding='utf-8') as f:
+        json.dump(raw_dicts, f, indent=4, ensure_ascii=False, cls=DateTimeEncoder)
+    print(f">>> [Archive] Saved {len(all_items)} raw items to {raw_output_path}")
     
     # 4. Filter for Previous 24 Hours (Yesterday's News)
     # E.g. If specific "yesterday" logic is needed (00:00-23:59 of previous day)
@@ -52,8 +72,8 @@ def run_stage1():
     
     # 4. Sort by Score and Pick Top 50 (Candidates for LLM)
     selected_items.sort(key=lambda x: x.relevance_score, reverse=True)
-    # Filter candidates: Take Top 50 to send to Judge (cost control)
-    candidates = selected_items[:50]
+    # Filter candidates: Take All valid items (User Request: No Limit)
+    candidates = selected_items[:]
     
     print(f">>> Selected {len(candidates)} candidates for LLM Judging.")
     
@@ -69,13 +89,14 @@ def run_stage1():
     
     if judge.enabled:
         print(">>> Judge is enabled. Re-ranking candidates...")
+        # Note: Large batches might take time.
         ranked_items = judge.evaluate_batch(candidates)
-        # Take Top 30 after LLM ranking
-        final_list = ranked_items[:30]
+        # Keep all ranked items
+        final_list = ranked_items[:]
     else:
         print(">>> Judge is disabled. Using heuristic ranking.")
-        # Fallback to Top 30 Heuristic
-        final_list = candidates[:30]
+        # Keep all candidates
+        final_list = candidates[:]
 
     print(f">>> Final Selection: {len(final_list)} items.")
     for i, item in enumerate(final_list):
@@ -98,9 +119,11 @@ def run_stage1():
         print(f"    [{i+1}] {item.title} ({score_str}){related_str}")
         
     # 6. Save State
-    today = datetime.now().strftime("%Y-%m-%d")
-    output_dir = f"data/daily/{today}"
-    os.makedirs(output_dir, exist_ok=True)
+    # 6. Save State
+    # Directory created at start
+    # today = datetime.now().strftime("%Y-%m-%d")
+    # output_dir = f"data/daily/{today}"
+    # os.makedirs(output_dir, exist_ok=True)
     
     # Save ranked version
     output_path = f"{output_dir}/1_selected_ranked.json"
@@ -113,11 +136,6 @@ def run_stage1():
     from dataclasses import asdict
     data_dicts = [asdict(item) for item in final_list]
     
-    class DateTimeEncoder(json.JSONEncoder):
-        def default(self, o):
-            if isinstance(o, datetime):
-                return o.isoformat()
-            return super().default(o)
             
     with open(output_path, 'w', encoding='utf-8') as f:
         json.dump(data_dicts, f, indent=4, ensure_ascii=False, cls=DateTimeEncoder)

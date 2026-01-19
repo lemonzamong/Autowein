@@ -39,7 +39,7 @@ class RealScraper(BaseScraper):
                     
                     html = content.decode('utf-8', errors='ignore')
                     matches = re.findall(r'<h[23][^>]*><a[^>]*href=["\'](.*?)["\'][^>]*>(.*?)</a></h[23]>', html)
-                    for i, (link, title) in enumerate(matches[:5]):
+                    for i, (link, title) in enumerate(matches[:500]):
                         title = re.sub(r'<[^>]+>', '', title).strip()
                         news_items.append(NewsItem(
                             id=f"SCRAPED_{len(news_items)}",
@@ -116,7 +116,11 @@ class RealScraper(BaseScraper):
                     content=str(title_text + " " + desc_text), 
                     url=link_text,
                     published_at=pub_date,
-                    source=source_url
+                    source=source_url,
+                    # [NEW] Extracted Metadata
+                    author=self._get_text(item, ['creator', 'author', 'dc:creator']),
+                    tags=[c.text for c in item.findall('category') if c.text],
+                    image_url=self._get_image(item)
                 ))
                 count += 1
                 
@@ -125,3 +129,34 @@ class RealScraper(BaseScraper):
             print(f"[Scraper] RSS Parse Error: {e}")
             
         return items
+
+    def _get_text(self, item, tags):
+        for tag in tags:
+            # Try finding with namespace wildcard roughly or exact match
+            # Python ElementTree namespace handling is tricky.
+            # We try direct match first.
+            res = item.find(tag)
+            if res is not None and res.text:
+                return res.text
+            # Try iterate children if namespace issues
+            for child in item:
+                if any(t in child.tag for t in tags):
+                    return child.text
+        return "Unknown"
+
+    def _get_image(self, item):
+        # Media Content / Enclosure
+        # Check <enclosure url="...">
+        enc = item.find('enclosure')
+        if enc is not None:
+             return enc.get('url', '')
+             
+        # Check media:content (namespace)
+        # Often looks like {http://search.yahoo.com/mrss/}content
+        for child in item:
+            if 'content' in child.tag and 'url' in child.attrib:
+                # likely media:content
+                return child.attrib['url']
+            if 'thumbnail' in child.tag and 'url' in child.attrib:
+                return child.attrib['url']
+        return ""
