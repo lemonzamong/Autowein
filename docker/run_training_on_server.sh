@@ -3,7 +3,7 @@ echo '=== Autowein Training Launcher ==='
 
 # 1. Build Docker Image
 echo '[1/2] Building Docker Image...'
-docker build -t autowein-trainer .
+docker build -t autowein-trainer -f docker/Dockerfile .
 
 # 2. Run Container on GPUs 1 and 2
 echo '[2/2] Running Training on GPUs 1 and 2...'

@@ -1,81 +1,115 @@
 import streamlit as st
-import requests
-import pandas as pd
-from datetime import datetime
 import json
+import os
+from datetime import datetime
+from glob import glob
+import subprocess
 
-USER_API_URL = "http://localhost:8000"
+st.set_page_config(page_title="Autowein Curator", layout="wide")
 
-st.set_page_config(page_title="Autowein's Digital Twin", layout="wide")
+st.title("Autowein: Human-in-the-Loop Curator (Stage 1.5)")
 
-st.title("Autowein's Cognitive Digital Twin (ACDT)")
-st.caption("Domain-Specific Market Insight Automation System")
+# 1. Select Date
+# Find all "1_selected.json" files
+data_root = "data/daily"
+dates = []
+if os.path.exists(data_root):
+    dates = sorted(os.listdir(data_root), reverse=True)
 
-# Sidebar - Configuration
-st.sidebar.header("Control Panel")
-domain = st.sidebar.selectbox("Domain", ["Mobility & EV", "Bio & Pharma", "Semiconductor"])
-st.sidebar.info(f"Active Ontology: {domain}")
+selected_date = st.selectbox("Select Date", dates)
 
-# Tabs
-tab1, tab2, tab3 = st.tabs(["News Ingestion", "Graph Explorer", "Analyst Output"])
-
-with tab1:
-    st.header("1. Gatekeeper: News Selection")
-    if st.button("Fetch Latest News"):
-        with st.spinner("Scraping and Filtering..."):
-            try:
-                # Mock call or real call depending on API state
-                # In real scenario: response = requests.post(f"{USER_API_URL}/ingest", json={"items": []})
-                # For demo dashboard we simulate data if API is down
-                 st.success("Fetched 3 relevant articles out of 50 crawled.")
-                 st.dataframe(pd.DataFrame([
-                     {"Title": "Canada imposes 100% tariff", "Source": "Reuters", "Score": 0.95},
-                     {"Title": "Tesla FSD v12 Released", "Source": "TechCrunch", "Score": 0.88},
-                     {"Title": "Rivian stocks plunge", "Source": "Bloomberg", "Score": 0.82}
-                 ]))
-            except Exception as e:
-                st.error(f"API Error: {e}")
-
-with tab2:
-    st.header("2. Historian: Knowledge Graph")
-    st.markdown("Visualizing the **Causal Chain** for the selected event.")
+if not selected_date:
+    st.warning("No data found.")
+    st.stop()
     
-    # Hardcoded graph visualization for demo
-    st.graphviz_chart('''
-    digraph {
-        rankdir=LR;
-        node [shape=box style=filled fillcolor=lightblue];
-        "USMCA (2020)" -> "Regional Value Content" [label="Mandates"];
-        "Regional Value Content" -> "Canada Tariffs (2024)" [label="Justifies"];
-        "Canada Tariffs (2024)" -> "Chinese EV Exclusion" [label="Causes"];
-        "Chinese EV Exclusion" -> "Tesla Market Share" [label="Increases"];
-    }
-    ''')
-    st.caption("Path extracted by GraphRAG Engine")
+# 2. Load Data
+# Try loading ranked version first
+ranked_path = f"{data_root}/{selected_date}/1_selected_ranked.json"
+legacy_path = f"{data_root}/{selected_date}/1_selected.json"
 
-with tab3:
-    st.header("3. Analyst: Daily Commentary")
+if os.path.exists(ranked_path):
+    file_path = ranked_path
+    data_type = "Ranked (LLM Included)"
+else:
+    file_path = legacy_path
+    data_type = "Heuristic Only"
     
-    col1, col2 = st.columns([2, 1])
+output_path = f"{data_root}/{selected_date}/2_curated.json"
+
+if not os.path.exists(file_path):
+    st.error(f"File not found: {file_path}")
+    st.stop()
+
+with open(file_path, "r", encoding="utf-8") as f:
+    items = json.load(f)
+
+st.info(f"Loaded {len(items)} items from Stage 1 ({data_type}).")
+
+# 3. Selection UI
+st.subheader("Select Top 10 Items")
+st.caption("Please check the items you want to include in the Analysis Report.")
+
+with st.form("selection_form"):
+    selected_indices = []
     
-    with col1:
-        st.subheader("Generated Insight")
-        st.markdown("""
-        ### Canada’s Tariff Move: A USMCA Checkmate
+    # Sort by score desc (LLM or Heuristic)
+    items.sort(key=lambda x: x.get('relevance_score', 0), reverse=True)
+    
+    col1, col2 = st.columns([0.7, 0.3])
+    
+    for i, item in enumerate(items):
+        score = item.get('relevance_score', 0)
+        breakdown = item.get('scores_breakdown', {})
         
-        **Summary**: Canada has aligned with the US by imposing a 100% surtax on Chinese EVs.
+        # Breakdown String
+        hybrid_info = ""
+        llm_reason = ""
+        if breakdown:
+            base_str = f"TF: {breakdown.get('tfidf',0):.2f} | Sem: {breakdown.get('semantic',0):.2f}"
+            if 'llm_score' in breakdown:
+                hybrid_info = f" (🤖 LLM: {breakdown['llm_score']:.2f} | {base_str})"
+                llm_reason = breakdown.get('llm_reason', '')
+            else:
+                hybrid_info = f" ({base_str} | Rep: {breakdown.get('reputation',0):.2f})"
         
-        **Analysis**: While this appears to be a sudden trade dispute, our **Historical Context** engine reveals it is a direct consequence of the **USMCA 2020** agreement's "unset clause" regarding non-market economies. 
+        # Default select top 10
+        default_val = i < 10
         
-        **Prediction**: This will likely force Chinese manufacturers like BYD to accelerate their factory plans in Mexico to bypass these tariffs, potentially triggering a 'backdoor' dispute by Q4 2025.
-        """)
+        # Highlight Low Reputation & Clusters
+        rep_score = breakdown.get('reputation', 1.0) if breakdown else 1.0
+        warning_icon = "⚠️" if rep_score < 0.8 else ""
         
-    with col2:
-        st.subheader("Agent Reasoning")
-        st.info("Planner: Found link to USMCA 2020.")
-        st.info("Simulator: Ran counterfactual 'If no tariff -> Market flood'.")
-        st.info("Critic: Style match 92%. Insight depth High.")
+        cluster_info = ""
+        if hasattr(item, 'related_items') and item.related_items:
+            cluster_info = f" (+{len(item.related_items)} related)"
         
-    if st.button("Approve & Publish"):
-        st.balloons()
-        st.success("Commentary published to Autowein.com")
+        label = f"{warning_icon} [{score:.3f}] {item['title']}{cluster_info}"
+        with st.expander(f"{label} {hybrid_info}", expanded=default_val):
+            st.write(f"**Source:** {item.get('source')} | **Date:** {item.get('published_at')}")
+            st.write(item.get('content', '')[:300] + "...")
+            st.markdown(f"[Read Original]({item.get('url')})")
+            
+            # Checkbox inside expander might be tricky for form submission?
+            # Better to put checkbox outside.
+            
+        checked = st.checkbox(f"Select #{i+1}", value=default_val, key=f"d_{i}")
+        if checked:
+            selected_indices.append(i)
+
+    submitted = st.form_submit_button("Confirm Selection & Save")
+    
+    if submitted:
+        curated_items = [items[i] for i in selected_indices]
+        
+        # Save
+        with open(output_path, "w", encoding="utf-8") as f:
+            json.dump(curated_items, f, indent=4, ensure_ascii=False)
+            
+        st.success(f"Saved {len(curated_items)} items to {output_path}")
+        
+        # Trigger Analysis?
+        st.write("Generating analysis report...")
+        # In a real app we might run this async or in a separate process.
+        # For now, just show the command to run.
+        st.code(f"python3 scripts/pipeline/03_analysis.py", language="bash")
+        

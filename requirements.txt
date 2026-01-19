@@ -13,6 +13,7 @@ httpx
 # Production Additions
 neo4j
 openai
+google-genai
 beautifulsoup4
 newspaper3k
 lxml

@@ -1,4 +1,10 @@
 from datetime import datetime
+import sys
+import os
+
+# Add project root path
+sys.path.append(os.path.join(os.path.dirname(__file__), "../.."))
+
 from src.core.models import NewsItem, Event, Entity, EntityType
 from src.core.config import ConfigLoader
 from src.gatekeeper.engine import GatekeeperEngine

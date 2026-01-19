@@ -47,7 +47,12 @@ def run_interactive(cmd_list, password, desc="Command"):
         return status == 0, output.decode(errors='ignore')
 
 def main():
+    # Force execution from project root
+    project_root = os.path.join(os.path.dirname(__file__), "../..")
+    os.chdir(project_root)
+    
     print("=== Autowein Remote Deployer ===")
+    print(f"Working Directory: {os.getcwd()}")
     
     # 1. Archive
     print("1. Creating Archive...")

@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Autowein Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg-body: #ffffff;
+            --bg-sidebar: #f9fafb;
+            --border-color: #e5e7eb;
+            --text-primary: #111827;
+            --text-secondary: #6b7280;
+            --primary-color: #2563eb;
+            --primary-hover: #1d4ed8;
+            --success-color: #059669;
+            --error-color: #dc2626;
+            --terminal-bg: #1e1e1e;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-primary);
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* Sidebar */
+        aside {
+            width: 280px;
+            background-color: var(--bg-sidebar);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 1.5rem;
+            flex-shrink: 0;
+        }
+
+        .brand {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .brand svg {
+            width: 20px;
+            height: 20px;
+            color: var(--text-secondary);
+        }
+
+        .nav-group {
+            margin-bottom: 2rem;
+        }
+
+        .nav-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            margin-bottom: 0.75rem;
+            letter-spacing: 0.05em;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            padding: 0.625rem 0.875rem;
+            margin-bottom: 0.25rem;
+            background: none;
+            border: 1px solid transparent;
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: left;
+            font-family: inherit;
+        }
+
+        .nav-item:hover:not(:disabled) {
+            background-color: #fff;
+            border-color: var(--border-color);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+
+        .nav-item:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .nav-item.active {
+            background-color: #e0e7ff;
+            color: var(--primary-color);
+            border-color: transparent;
+        }
+
+        .nav-item.primary {
+            background-color: var(--primary-color);
+            color: white;
+            box-shadow: 0 1px 2px rgba(37, 99, 235, 0.2);
+        }
+
+        .nav-item.primary:hover:not(:disabled) {
+            background-color: var(--primary-hover);
+            border-color: transparent;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--border-color);
+            transition: background-color 0.3s;
+        }
+
+        .nav-item.running .status-dot {
+            background-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+            animation: pulse 1.5s infinite;
+        }
+
+        .connection-status {
+            margin-top: auto;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            padding-top: 1rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .conn-indicator {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background-color: var(--error-color);
+        }
+
+        .conn-indicator.active {
+            background-color: var(--success-color);
+        }
+
+        /* Main Content */
+        main {
+            flex: 1;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            /* Center align for header controls */
+        }
+
+        .header-left {
+            display: flex;
+            flex-direction: column;
+        }
+
+        h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .subtitle {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Date Selector */
+        select.date-select {
+            padding: 0.5rem 2rem 0.5rem 1rem;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            background-color: #fff;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 0.9rem;
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 0.7rem center;
+        }
+
+        select.date-select:hover {
+            border-color: #d1d5db;
+        }
+
+        select.date-select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            ring: 2px solid rgba(37, 99, 235, 0.2);
+        }
+
+
+        /* Views */
+        .view-section {
+            display: none;
+            flex-direction: column;
+            flex: 1;
+            height: 100%;
+        }
+
+        .view-section.active {
+            display: flex;
+        }
+
+        .terminal-window {
+            flex: 1;
+            background-color: var(--terminal-bg);
+            border-radius: 8px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border: 1px solid #333;
+        }
+
+        .terminal-bar {
+            background-color: #2d2d2d;
+            padding: 0.5rem 1rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            border-bottom: 1px solid #333;
+        }
+
+        .window-control {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .bg-red {
+            background-color: #ef4444;
+        }
+
+        .bg-yellow {
+            background-color: #f59e0b;
+        }
+
+        .bg-green {
+            background-color: #10b981;
+        }
+
+        .terminal-title {
+            margin-left: 10px;
+            font-size: 0.8rem;
+            color: #9ca3af;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        #logs {
+            flex: 1;
+            padding: 1.5rem;
+            overflow-y: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            line-height: 1.6;
+            color: #d1d5db;
+        }
+
+        /* Result Viewer */
+        .result-container {
+            flex: 1;
+            background: #fff;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 2rem;
+            overflow-y: auto;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .result-card {
+            background: #f9fafb;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .result-title {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .result-meta {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .md-content {
+            font-family: 'Inter', sans-serif;
+            line-height: 1.6;
+        }
+
+        .md-content h1 {
+            font-size: 1.8rem;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 0.5rem;
+        }
+
+        .md-content h2 {
+            font-size: 1.4rem;
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+            color: #1f2937;
+        }
+
+        .md-content h3 {
+            font-size: 1.1rem;
+            margin-top: 1rem;
+            font-weight: 600;
+        }
+
+        .md-content p {
+            margin-bottom: 1rem;
+            color: #374151;
+        }
+
+        .md-content blockquote {
+            border-left: 4px solid var(--primary-color);
+            padding-left: 1rem;
+            color: #4b5563;
+            background: #eff6ff;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+        }
+
+        /* Clean Scrollbar */
+        #logs::-webkit-scrollbar,
+        .result-container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        #logs::-webkit-scrollbar-track,
+        .result-container::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        #logs::-webkit-scrollbar-thumb,
+        .result-container::-webkit-scrollbar-thumb {
+            background: #d1d5db;
+            border-radius: 4px;
+        }
+
+        #logs::-webkit-scrollbar-thumb:hover {
+            background: #9ca3af;
+        }
+
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.4);
+            }
+
+            70% {
+                box-shadow: 0 0 0 4px rgba(37, 99, 235, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(37, 99, 235, 0);
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <aside>
+        <div class="brand">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+            </svg>
+            Autowein
+        </div>
+
+        <div class="nav-group">
+            <div class="nav-label">Views</div>
+            <button class="nav-item active" id="view-logs-btn" onclick="switchView('logs')">
+                <span>Live Logs</span>
+            </button>
+            <button class="nav-item" id="view-results-btn" onclick="switchView('results')">
+                <span>Results</span>
+            </button>
+        </div>
+
+        <div class="nav-group">
+            <div class="nav-label">Pipeline Controls</div>
+            <button class="nav-item primary" id="btn-all" onclick="runPipeline()">
+                <span>Run Full Sequence</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                </svg>
+            </button>
+        </div>
+
+        <div class="nav-group">
+            <div class="nav-label">Stages</div>
+            <button class="nav-item" id="btn-s1" onclick="runStage('1')">
+                <span>01 Selection</span>
+                <div class="status-dot"></div>
+            </button>
+            <button class="nav-item" id="btn-s2" onclick="runStage('2')">
+                <span>02 Curation</span>
+                <div class="status-dot"></div>
+            </button>
+            <button class="nav-item" id="btn-s3" onclick="runStage('3')">
+                <span>03 Analysis</span>
+                <div class="status-dot"></div>
+            </button>
+            <button class="nav-item" id="btn-s4" onclick="runStage('4')">
+                <span>04 Export</span>
+                <div class="status-dot"></div>
+            </button>
+        </div>
+
+        <div class="connection-status">
+            <div id="conn-indicator" class="conn-indicator"></div>
+            <span id="conn-text">Disconnected</span>
+        </div>
+    </aside>
+
+    <main>
+        <header>
+            <div class="header-left">
+                <h2 id="page-title">Live Logs</h2>
+                <p class="subtitle" id="page-subtitle">Real-time pipeline execution status.</p>
+            </div>
+
+            <div class="header-controls">
+                <!-- Date Selector (Only visible in results view via JS) -->
+                <select id="date-selector" class="date-select" style="display:none;" onchange="loadResults(this.value)">
+                    <option value="latest">Latest</option>
+                </select>
+
+                <button class="nav-item" style="width: auto; background: white; border: 1px solid #e5e7eb;"
+                    onclick="clearLogs()" id="clear-btn">
+                    Clear Logs
+                </button>
+                <button class="nav-item primary" style="width: auto; display:none;" onclick="loadResults('latest')"
+                    id="refresh-btn">
+                    Refresh
+                </button>
+            </div>
+        </header>
+
+        <!-- LOGS VIEW -->
+        <div id="view-logs" class="view-section active">
+            <div class="terminal-window">
+                <div class="terminal-bar">
+                    <div class="window-control bg-red"></div>
+                    <div class="window-control bg-yellow"></div>
+                    <div class="window-control bg-green"></div>
+                    <span class="terminal-title">pipeline_output.log</span>
+                </div>
+                <div id="logs">
+                    <div style="color: #6b7280; margin-bottom: 1rem;">// Waiting for commands...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- RESULTS VIEW -->
+        <div id="view-results" class="view-section">
+            <div class="result-container" id="result-content">
+                <div style="text-align: center; color: #6b7280; padding: 2rem;">
+                    Select a date to view results.
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        const logs = document.getElementById('logs');
+        const connInd = document.getElementById('conn-indicator');
+        const connText = document.getElementById('conn-text');
+
+        // WebSocket
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/api/ws/logs`;
+        let websocket;
+
+        function initWebSocket() {
+            websocket = new WebSocket(wsUrl);
+
+            websocket.onopen = () => {
+                connInd.classList.add('active');
+                connText.textContent = 'System Online';
+                connText.style.color = 'var(--success-color)';
+            };
+
+            websocket.onclose = () => {
+                connInd.classList.remove('active');
+                connText.textContent = 'Disconnected';
+                connText.style.color = 'var(--text-secondary)';
+                setTimeout(initWebSocket, 2000);
+            };
+
+            websocket.onmessage = (evt) => {
+                appendLog(evt.data);
+            };
+        }
+
+        initWebSocket();
+
+        function appendLog(text) {
+            let formatted = text
+                .replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/\u001b\[0m/g, '</span>')
+                .replace(/\u001b\[1;36m/g, '<span style="color: #60a5fa; font-weight: 600;">')
+                .replace(/\u001b\[1;32m/g, '<span style="color: #34d399; font-weight: 600;">')
+                .replace(/\u001b\[1;31m/g, '<span style="color: #f87171; font-weight: 600;">')
+                .replace(/\n/g, '<br>');
+
+            const div = document.createElement('div');
+            div.innerHTML = formatted;
+            logs.appendChild(div);
+            logs.scrollTop = logs.scrollHeight;
+        }
+
+        function clearLogs() {
+            logs.innerHTML = '<div style="color: #6b7280; margin-bottom: 1rem;">// Logs cleared</div>';
+        }
+
+        // --- History Logic ---
+        async function fetchHistory() {
+            try {
+                const res = await fetch('/api/history');
+                const dates = await res.json();
+
+                const selector = document.getElementById('date-selector');
+                selector.innerHTML = '';
+
+                if (dates.length === 0) {
+                    const opt = document.createElement('option');
+                    opt.text = "No Data";
+                    selector.add(opt);
+                    return;
+                }
+
+                // Add Latest Option
+                dates.forEach(date => {
+                    const opt = document.createElement('option');
+                    opt.value = date;
+                    opt.text = date;
+                    selector.add(opt);
+                });
+
+                // Select first one (Latest)
+                selector.selectedIndex = 0;
+
+            } catch (e) {
+                console.error("Failed to fetch history:", e);
+            }
+        }
+
+        // View Switcher
+        function switchView(viewName) {
+            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+
+            document.getElementById(`view-${viewName}`).classList.add('active');
+            document.getElementById(`view-${viewName}-btn`).classList.add('active');
+
+            const dateSelect = document.getElementById('date-selector');
+            const clearBtn = document.getElementById('clear-btn');
+            const refreshBtn = document.getElementById('refresh-btn');
+
+            if (viewName === 'logs') {
+                document.getElementById('page-title').textContent = 'Live Logs';
+                document.getElementById('page-subtitle').textContent = 'Real-time pipeline execution status.';
+
+                dateSelect.style.display = 'none';
+                clearBtn.style.display = 'block';
+                refreshBtn.style.display = 'none';
+            } else {
+                document.getElementById('page-title').textContent = 'Pipeline Results';
+                document.getElementById('page-subtitle').textContent = 'Generating intelligence reports.';
+
+                dateSelect.style.display = 'block';
+                clearBtn.style.display = 'none';
+                refreshBtn.style.display = 'block';
+
+                // Init load
+                fetchHistory().then(() => {
+                    const val = dateSelect.value;
+                    if (val) loadResults(val);
+                });
+            }
+        }
+
+        async function loadResults(dateStr) {
+            if (!dateStr) dateStr = 'latest';
+
+            const container = document.getElementById('result-content');
+            container.innerHTML = '<div style="text-align: center; color: #6b7280;">Fetching data...</div>';
+
+            try {
+                const res = await fetch(`/api/results/${dateStr}`);
+                const data = await res.json();
+
+                if (data.error) {
+                    container.innerHTML = `<div style="text-align: center; color: #dc2626;">Error: ${data.error}</div>`;
+                    return;
+                }
+
+                let html = `<div style="margin-bottom: 1.5rem; padding-bottom: 0.5rem; border-bottom: 1px solid #eee; color: #6b7280;">Data Date: ${data.date}</div>`;
+
+                // Report
+                if (data.report) {
+                    html += `<div class="md-content">${parseMarkdown(data.report)}</div>`;
+                } else {
+                    html += `<div class="result-card">No Final Report (Stage 4) found.</div>`;
+                }
+
+                if (data.analyzed) {
+                    html += `<h3>Analyzed Items (${data.analyzed.length})</h3>`;
+
+                    data.analyzed.forEach((item, index) => {
+                        const isHidden = index >= 3;
+                        const style = isHidden ? 'display:none;' : '';
+                        const className = isHidden ? 'result-card hidden-item' : 'result-card';
+
+                        html += `
+                        <div class="${className}" style="${style}">
+                            <div class="result-title">${item.title} <span style="font-size:0.8em; color: #059669;">Score: ${item.confidence_score || 'N/A'}</span></div>
+                            <div class="result-meta">${(item.content || '').substring(0, 150)}...</div>
+                        </div>`;
+                    });
+
+                    if (data.analyzed.length > 3) {
+                        html += `<button id="show-more-btn" onclick="showAllItems()" style="color:#2563eb; font-size: 0.9rem; background:none; border:none; cursor:pointer; padding:0; margin-top:0.5rem;">+ ${data.analyzed.length - 3} more items...</button>`;
+                    }
+                }
+
+                container.innerHTML = html;
+
+            } catch (e) {
+                container.innerHTML = `<div style="text-align: center; color: #dc2626;">Failed to load results: ${e}</div>`;
+            }
+        }
+
+        function showAllItems() {
+            document.querySelectorAll('.hidden-item').forEach(el => el.style.display = 'block');
+            document.getElementById('show-more-btn').style.display = 'none';
+        }
+
+        function parseMarkdown(md) {
+            // Very basic parser for demo
+            return md
+                .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+                .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+                .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+                .replace(/^\> (.*$)/gim, '<blockquote>$1</blockquote>')
+                .replace(/\*\*(.*)\*\*/gim, '<b>$1</b>')
+                .replace(/\n/gim, '<br>');
+        }
+
+        async function runStage(id) {
+            switchView('logs');
+            const btn = document.getElementById(`btn-s${id}`);
+            btn.classList.add('running');
+            try {
+                await fetch(`/api/run/${id}`, { method: 'POST' });
+            } catch (e) {
+                appendLog(`\u001b[1;31mError connecting to server: ${e}\u001b[0m`);
+            } finally {
+                setTimeout(() => btn.classList.remove('running'), 1000);
+            }
+        }
+
+        async function runPipeline() {
+            switchView('logs');
+            const btn = document.getElementById('btn-all');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<span>Requested...</span>';
+            btn.disabled = true;
+
+            try {
+                await fetch('/api/run-all', { method: 'POST' });
+            } catch (e) {
+                appendLog(`\u001b[1;31mError connecting to server: ${e}\u001b[0m`);
+            } finally {
+                setTimeout(() => {
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                }, 2000);
+            }
+        }
+    </script>
+</body>
+
+</html>
